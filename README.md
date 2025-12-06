@@ -101,29 +101,28 @@ vibewatch --buffer-size 500 npm test
 
 ## MCP Integration
 
-### Claude Desktop Configuration
+### Claude Desktop / Cursor Configuration
 
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "vibewatch": {
-      "command": "node",
-      "args": ["/path/to/vibewatch/dist/mcp-server.js"]
-    }
-  }
-}
-```
-
-Or if installed globally:
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`) or Cursor MCP settings:
 
 ```json
 {
   "mcpServers": {
     "vibewatch": {
       "command": "npx",
-      "args": ["vibewatch-mcp"]
+      "args": ["-y", "-p", "vibewatch", "vibewatch-mcp"]
+    }
+  }
+}
+```
+
+Or if installed globally (`npm install -g vibewatch`):
+
+```json
+{
+  "mcpServers": {
+    "vibewatch": {
+      "command": "vibewatch-mcp"
     }
   }
 }
