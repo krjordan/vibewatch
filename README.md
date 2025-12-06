@@ -42,7 +42,7 @@ vibewatch npm run dev
 - Test failure deep dive
 - Team collaboration features
 
-See [ROADMAP.md](./ROADMAP.md) for full development plan.
+See [ROADMAP.md](./docs/planning/ROADMAP.md) for full development plan.
 
 ## Architecture
 
@@ -85,9 +85,12 @@ npm run typecheck
 
 ## Documentation
 
-- [PRD.md](./PRD.md) - Product Requirements Document
-- [ROADMAP.md](./ROADMAP.md) - Development roadmap
-- [FEATURE_IDEAS.md](./FEATURE_IDEAS.md) - Future feature ideas
+- [PRD.md](./docs/planning/PRD.md) - Product Requirements Document
+- [ROADMAP.md](./docs/planning/ROADMAP.md) - Development roadmap
+- [FEATURE_IDEAS.md](./docs/planning/FEATURE_IDEAS.md) - Future feature ideas
+- [Development Docs](./docs/development/) - Phase summaries and development guides
+
+See [docs/](./docs/) for all documentation.
 
 ## License
 
