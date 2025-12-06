@@ -48,8 +48,9 @@ describe('ProcessManager', () => {
       const logs: string[] = [];
       pm.on('log', (line: string) => logs.push(line));
 
-      // Use a properly escaped script
-      pm.spawn('node', ['-e', 'console.error("stderr output");']);
+      // Use a simple command that outputs to stderr across platforms
+      // node -e is reliable for stderr output
+      pm.spawn('node', ['-e', 'process.stderr.write("stderr output\\n")']);
 
       await new Promise<void>((resolve) => {
         pm.on('exit', () => resolve());
