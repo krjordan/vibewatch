@@ -56,6 +56,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description: 'Filter output to specific types. Use "errors" to see only error messages, "warnings" for warnings, or "all" for everything.',
               default: 'all',
             },
+            detail: {
+              type: 'string',
+              enum: ['errors', 'context', 'full'],
+              description: 'Detail level for progressive disclosure. "errors" returns only error lines (~200 tokens), "context" returns errors with surrounding context (~500 tokens), "full" returns all output (~1000 tokens). Start with "errors" or "context" to save tokens.',
+              default: 'full',
+            },
           },
         },
       },
@@ -103,10 +109,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (name === 'get_terminal_output') {
     const lines = Math.min((args?.lines as number) || 50, 100);
     const filter = (args?.filter as string) || 'all';
+    const detail = (args?.detail as string) || 'full';
 
     try {
       const response = await fetch(
-        `${API_BASE}/live?lines=${lines}&filter=${filter}`
+        `${API_BASE}/live?lines=${lines}&filter=${filter}&detail=${detail}`
       );
 
       if (!response.ok) {

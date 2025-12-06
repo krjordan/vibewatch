@@ -54,6 +54,7 @@ export const FrameworkPatterns = {
       /Invalid getStaticProps/i,
       /Invalid getServerSideProps/i,
       /Error: connect ECONNREFUSED/i,
+      /⨯\s*Error:/,  // Next.js error symbol
     ],
     warnings: [
       /Fast Refresh had to perform a full reload/i,
@@ -68,6 +69,15 @@ export const FrameworkPatterns = {
       /event.*compiled/i,
       /○\s*Compiling/,
       /✓\s*Ready in/,
+      /✓\s*Compiled/,
+      /▲\s*Next\.js/,  // Next.js banner
+      /-\s*Local:/,
+      /-\s*Network:/,
+      /-\s*Environments:/,
+      /-\s*Experiments/,
+      /·\s*\w+/,  // Experiment list items
+      /GET\s+\/.*\s+\d{3}\s+in\s+\d+ms/,  // Request logs (non-error)
+      /POST\s+\/.*\s+\d{3}\s+in\s+\d+ms/,
     ],
   },
 
@@ -528,6 +538,181 @@ export class LogAnalyzer {
     }
 
     return 'unknown';
+  }
+}
+
+/**
+ * Line relevance scores for prioritization
+ */
+export enum RelevanceScore {
+  CRITICAL = 100,  // Error messages, crash indicators
+  HIGH = 75,       // Stack trace lines, file paths
+  MEDIUM = 50,     // Warnings, context
+  LOW = 25,        // Info logs
+  NOISE = 0,       // Should be filtered
+}
+
+/**
+ * Scored line with relevance information
+ */
+export interface ScoredLine {
+  content: string;
+  score: RelevanceScore;
+  lineNumber: number;
+  isError: boolean;
+  isWarning: boolean;
+  filePath?: string;
+}
+
+/**
+ * Output detail level for progressive disclosure
+ */
+export type DetailLevel = 'errors' | 'context' | 'full';
+
+/**
+ * Relevance Scorer - Assigns importance scores to log lines
+ */
+export class RelevanceScorer {
+  /**
+   * Score a single line
+   */
+  static scoreLine(line: string, framework: Framework = 'generic', lineNumber: number = 0): ScoredLine {
+    const isError = LogAnalyzer.isError(line, framework);
+    const isWarning = LogAnalyzer.isWarning(line, framework);
+    const isNoise = LogAnalyzer.isNoise(line, framework);
+    const filePath = this.extractFilePath(line);
+
+    let score: RelevanceScore;
+
+    if (isNoise) {
+      score = RelevanceScore.NOISE;
+    } else if (isError) {
+      score = RelevanceScore.CRITICAL;
+    } else if (isWarning) {
+      score = RelevanceScore.HIGH;
+    } else if (filePath) {
+      // Stack trace lines with file paths
+      score = RelevanceScore.HIGH;
+    } else if (this.isStackTraceLine(line)) {
+      score = RelevanceScore.MEDIUM;
+    } else if (this.isInfoLog(line)) {
+      score = RelevanceScore.LOW;
+    } else {
+      score = RelevanceScore.MEDIUM;
+    }
+
+    return {
+      content: line,
+      score,
+      lineNumber,
+      isError,
+      isWarning,
+      filePath,
+    };
+  }
+
+  /**
+   * Score multiple lines
+   */
+  static scoreLines(lines: string[], framework: Framework = 'generic'): ScoredLine[] {
+    return lines.map((line, i) => this.scoreLine(line, framework, i));
+  }
+
+  /**
+   * Filter lines by detail level (progressive disclosure)
+   */
+  static filterByDetailLevel(scoredLines: ScoredLine[], level: DetailLevel): ScoredLine[] {
+    switch (level) {
+      case 'errors':
+        // Only critical errors
+        return scoredLines.filter(l => l.score === RelevanceScore.CRITICAL);
+
+      case 'context':
+        // Errors + high relevance (stack traces, warnings)
+        return scoredLines.filter(l => l.score >= RelevanceScore.HIGH);
+
+      case 'full':
+      default:
+        // Everything except noise
+        return scoredLines.filter(l => l.score > RelevanceScore.NOISE);
+    }
+  }
+
+  /**
+   * Get lines with context window around errors
+   */
+  static getErrorsWithContext(lines: string[], windowSize: number = 5, framework: Framework = 'generic'): string[] {
+    const scored = this.scoreLines(lines, framework);
+    const result: Set<number> = new Set();
+
+    // Find error indices
+    scored.forEach((line, index) => {
+      if (line.isError) {
+        // Add error line and surrounding context
+        for (let i = Math.max(0, index - windowSize); i <= Math.min(lines.length - 1, index + windowSize); i++) {
+          result.add(i);
+        }
+      }
+    });
+
+    // Build output with collapse indicators
+    const output: string[] = [];
+    let lastIndex = -1;
+    const sortedIndices = Array.from(result).sort((a, b) => a - b);
+
+    for (const index of sortedIndices) {
+      if (lastIndex !== -1 && index > lastIndex + 1) {
+        const collapsed = index - lastIndex - 1;
+        if (collapsed > 0) {
+          output.push(`... [${collapsed} line${collapsed > 1 ? 's' : ''} collapsed] ...`);
+        }
+      }
+      output.push(lines[index]);
+      lastIndex = index;
+    }
+
+    return output;
+  }
+
+  /**
+   * Extract file path from line if present
+   */
+  private static extractFilePath(line: string): string | undefined {
+    // JS/TS patterns
+    const jsMatch = line.match(/([^\s(]+\.(?:js|ts|jsx|tsx|mjs|cjs)):(\d+)/);
+    if (jsMatch) return `${jsMatch[1]}:${jsMatch[2]}`;
+
+    // Python pattern
+    const pyMatch = line.match(/File "([^"]+\.py)", line (\d+)/);
+    if (pyMatch) return `${pyMatch[1]}:${pyMatch[2]}`;
+
+    // Rust pattern
+    const rustMatch = line.match(/-->\s+([^\s:]+\.rs):(\d+)/);
+    if (rustMatch) return `${rustMatch[1]}:${rustMatch[2]}`;
+
+    // Go pattern
+    const goMatch = line.match(/([^\s:]+\.go):(\d+)/);
+    if (goMatch) return `${goMatch[1]}:${goMatch[2]}`;
+
+    return undefined;
+  }
+
+  /**
+   * Check if line is part of a stack trace
+   */
+  private static isStackTraceLine(line: string): boolean {
+    return /^\s+at\s+/.test(line) ||  // JS stack
+           /^\s+File "/.test(line) ||  // Python stack
+           /^\s*\d+\s*\|/.test(line);  // Code snippet with line numbers
+  }
+
+  /**
+   * Check if line is an info/debug log
+   */
+  private static isInfoLog(line: string): boolean {
+    return /\b(info|debug|log|trace)\b/i.test(line) ||
+           /^\s*\[info\]/i.test(line) ||
+           /^\s*\[debug\]/i.test(line);
   }
 }
 

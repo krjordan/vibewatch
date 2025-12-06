@@ -23,8 +23,11 @@ export interface TerminalOutput {
   process_status: 'running' | 'crashed' | 'exited';
   errors_detected: boolean;
   relevant_files?: string[];
+  detail_level?: string;
 }
 
 export type ProcessStatus = 'running' | 'crashed' | 'exited';
 
 export type FilterMode = 'all' | 'errors' | 'warnings';
+
+export type DetailLevel = 'errors' | 'context' | 'full';

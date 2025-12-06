@@ -27,18 +27,23 @@ export async function startApiServer(port: number, buffer: CircularBuffer) {
   });
 
   // Get live terminal output
+  // Supports progressive disclosure via 'detail' param: errors, context, full
   fastify.get<{
-    Querystring: { lines?: string; filter?: string }
+    Querystring: { lines?: string; filter?: string; detail?: string }
   }>('/live', async (request) => {
     const lines = Math.min(parseInt(request.query.lines || '50', 10), 100);
     const filter = request.query.filter || 'all';
+    const detail = request.query.detail || 'full';
 
     let output: string[];
 
-    if (filter === 'errors') {
+    if (filter === 'errors' || detail === 'errors') {
       output = buffer.getErrors();
     } else if (filter === 'warnings') {
       output = buffer.getWarnings();
+    } else if (detail === 'context') {
+      // Errors with surrounding context, collapsed sections
+      output = buffer.getErrorContext(5);
     } else {
       output = buffer.getLast(lines);
     }
@@ -49,6 +54,7 @@ export async function startApiServer(port: number, buffer: CircularBuffer) {
       process_status: buffer.isLocked() ? 'crashed' : 'running',
       errors_detected: buffer.errorCount() > 0,
       relevant_files: buffer.extractRelevantFiles(),
+      detail_level: detail,
     };
 
     return response;
