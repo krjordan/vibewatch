@@ -42,7 +42,10 @@
 		"dev": "tsup --watch",
 		"typecheck": "tsc --noEmit",
 		"clean": "rm -rf dist",
-		"prepublishOnly": "npm run clean && npm run build"
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"prepublishOnly": "npm run clean && npm run build && npm run test"
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.0.0",
@@ -53,8 +56,10 @@
 	},
 	"devDependencies": {
 		"@types/node": "^20.0.0",
+		"@vitest/coverage-v8": "^4.0.15",
 		"tsup": "^8.0.0",
-		"typescript": "^5.6.0"
+		"typescript": "^5.6.0",
+		"vitest": "^4.0.15"
 	},
 	"engines": {
 		"node": ">=18.0.0"

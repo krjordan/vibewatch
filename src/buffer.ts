@@ -144,6 +144,15 @@ export class CircularBuffer {
   }
 
   /**
+   * Unlock the buffer (without clearing)
+   */
+  unlock(): void {
+    this.locked = false;
+    this.snapshot = null;
+    this.exitCode = null;
+  }
+
+  /**
    * Clear buffer and unlock
    */
   clear(): void {
