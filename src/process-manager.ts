@@ -65,11 +65,19 @@ export class ProcessManager extends EventEmitter {
     });
 
     // Handle process exit
-    this.child.on('exit', (code, _signal) => {
-      if (code !== 0 && code !== null) {
+    this.child.on('exit', (code, signal) => {
+      // Determine if this is a crash:
+      // - Non-zero exit code
+      // - Killed by a signal (except SIGINT/SIGTERM which are user-initiated)
+      const isUserSignal = signal === 'SIGINT' || signal === 'SIGTERM';
+      const isCrash = (code !== 0 && code !== null) ||
+                      (signal !== null && !isUserSignal);
+
+      if (isCrash) {
         this.status = 'crashed';
-        console.error(`\n[VIBE-WATCH] ❌ Crash detected (exit code: ${code})`);
-        this.emit('crash', code);
+        const exitInfo = code !== null ? `exit code: ${code}` : `signal: ${signal}`;
+        console.error(`\n[VIBE-WATCH] ❌ Crash detected (${exitInfo})`);
+        this.emit('crash', code ?? 1);
       } else {
         this.status = 'exited';
         console.error(`\n[VIBE-WATCH] ✓ Process exited cleanly`);
