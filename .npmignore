@@ -1,0 +1,22 @@
+# Source files (don't publish)
+src/
+
+# Configuration files
+tsconfig.json
+tsup.config.ts
+
+# Development files
+.gitignore
+.npmignore
+
+# Documentation (keep README.md)
+ROADMAP.md
+FEATURE_IDEAS.md
+
+# Test files
+*.test.ts
+*.spec.ts
+__tests__/
+
+# CI/CD
+.github/
