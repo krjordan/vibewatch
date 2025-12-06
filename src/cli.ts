@@ -51,6 +51,7 @@ program
   .option('-b, --buffer-size <number>', 'Log buffer size', '100')
   .option('-v, --verbose', 'Include node_modules in stack traces')
   .option('-r, --raw', 'Disable noise filtering (keep all output)')
+  .option('-k, --keep-alive <seconds>', 'Keep API server alive after crash (for MCP queries)', '30')
   .action(async (command: string[], options) => {
     const fullCommand = command.join(' ');
 
@@ -67,6 +68,7 @@ program
     const port = parseInt(options.port, 10);
     const bufferSize = parseInt(options.bufferSize, 10);
     const rawMode = options.raw ?? false;
+    const keepAliveSeconds = parseInt(options.keepAlive, 10);
 
     // Create buffer
     const buffer = new CircularBuffer(bufferSize);
@@ -162,17 +164,28 @@ program
 
       console.error('');
       log(`${colors.bright}📸 Snapshot captured${colors.reset} - Ask Claude: "Check my terminal" or "Fix this crash"`);
+      log(`API server staying alive for ${keepAliveSeconds}s at http://127.0.0.1:${port}`);
+      log(`Press Ctrl+C to exit immediately`);
       console.error('');
+
+      // Keep the API server alive so Claude can query crash context
+      setTimeout(() => {
+        log('Keep-alive timeout reached, shutting down...');
+        fastify?.close().then(() => {
+          process.exit(exitCode);
+        });
+      }, keepAliveSeconds * 1000);
     });
 
     pm.on('exit', (exitCode: number | null) => {
       if (exitCode === 0 || exitCode === null) {
         logSuccess(`Process exited cleanly`);
+        // Clean exit - close immediately
+        fastify?.close().then(() => {
+          process.exit(exitCode || 0);
+        });
       }
-      // Clean up and exit
-      fastify?.close().then(() => {
-        process.exit(exitCode || 0);
-      });
+      // For crashes, the 'crash' event handler keeps the server alive
     });
 
     pm.on('error', (err: Error) => {
