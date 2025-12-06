@@ -14,6 +14,34 @@ import { LogAnalyzer } from './analyzer.js';
 
 const program = new Command();
 
+// ANSI color codes for terminal output
+const colors = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  dim: '\x1b[2m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  cyan: '\x1b[36m',
+};
+
+function log(message: string, color: string = colors.cyan): void {
+  console.error(`${color}[VIBE-WATCH]${colors.reset} ${message}`);
+}
+
+function logError(message: string): void {
+  console.error(`${colors.red}[VIBE-WATCH] ❌${colors.reset} ${message}`);
+}
+
+function logSuccess(message: string): void {
+  console.error(`${colors.green}[VIBE-WATCH] ✓${colors.reset} ${message}`);
+}
+
+function logWarning(message: string): void {
+  console.error(`${colors.yellow}[VIBE-WATCH] ⚠${colors.reset} ${message}`);
+}
+
 program
   .name('vibewatch')
   .description('Your AI pair programmer\'s eyes on your terminal')
@@ -22,58 +50,141 @@ program
   .option('-p, --port <number>', 'API server port', '3333')
   .option('-b, --buffer-size <number>', 'Log buffer size', '100')
   .option('-v, --verbose', 'Include node_modules in stack traces')
+  .option('-r, --raw', 'Disable noise filtering (keep all output)')
   .action(async (command: string[], options) => {
-    console.error('[VIBE-WATCH] Starting...');
-    console.error(`[VIBE-WATCH] Monitoring: ${command.join(' ')}`);
+    const fullCommand = command.join(' ');
+
+    // Banner
+    console.error('');
+    console.error(`${colors.cyan}${colors.bright}╭─────────────────────────────────────────╮${colors.reset}`);
+    console.error(`${colors.cyan}${colors.bright}│${colors.reset}  ${colors.bright}VIBE-WATCH${colors.reset} - AI Terminal Monitor       ${colors.cyan}${colors.bright}│${colors.reset}`);
+    console.error(`${colors.cyan}${colors.bright}╰─────────────────────────────────────────╯${colors.reset}`);
+    console.error('');
+
+    log(`Monitoring: ${colors.bright}${fullCommand}${colors.reset}`);
 
     // Parse options
     const port = parseInt(options.port, 10);
     const bufferSize = parseInt(options.bufferSize, 10);
+    const rawMode = options.raw ?? false;
 
     // Create buffer
     const buffer = new CircularBuffer(bufferSize);
-    console.error(`[VIBE-WATCH] Buffer size: ${bufferSize} lines`);
+    log(`Buffer: ${bufferSize} lines${rawMode ? ' (raw mode)' : ' (noise filtering enabled)'}`);
+
+    // Detect language and framework
+    const language = LogAnalyzer.detectLanguage(fullCommand);
+    const framework = LogAnalyzer.detectFramework(fullCommand);
+    buffer.setFramework(framework);
+    log(`Detected: ${language}${framework !== 'generic' ? ` (${framework})` : ''}`);
 
     // Start API server
+    let fastify;
     try {
-      await startApiServer(port, buffer);
+      fastify = await startApiServer(port, buffer);
     } catch (err) {
-      console.error('[VIBE-WATCH] Failed to start API server:', err);
+      logError(`Failed to start API server: ${err}`);
       process.exit(1);
     }
 
-    // Detect language
-    const fullCommand = command.join(' ');
-    const language = LogAnalyzer.detectLanguage(fullCommand);
-    console.error(`[VIBE-WATCH] Detected language: ${language}`);
-
     // Create process manager
     const pm = new ProcessManager();
+
+    // Graceful shutdown handler
+    const cleanup = async () => {
+      log('Shutting down...');
+      pm.kill();
+      await fastify?.close();
+      process.exit(0);
+    };
+
+    // Signal forwarding - forward SIGINT/SIGTERM to child process
+    process.on('SIGINT', () => {
+      log('Received SIGINT, forwarding to child process...');
+      pm.kill();
+    });
+
+    process.on('SIGTERM', () => {
+      log('Received SIGTERM, forwarding to child process...');
+      pm.kill();
+    });
+
+    // Handle uncaught exceptions gracefully
+    process.on('uncaughtException', async (err) => {
+      logError(`Uncaught exception: ${err.message}`);
+      await cleanup();
+    });
+
+    // Track if we've seen errors (for non-fatal error notifications)
+    let lastErrorCount = 0;
 
     // Wire up events
     pm.on('log', (line: string) => {
       // Strip ANSI codes and add to buffer
       const cleaned = stripAnsi(line);
-      buffer.add(cleaned);
+
+      if (rawMode) {
+        buffer.addRaw(cleaned);
+      } else {
+        buffer.add(cleaned);
+      }
+
+      // Check for new errors (non-fatal error detection)
+      const currentErrorCount = buffer.errorCount();
+      if (currentErrorCount > lastErrorCount) {
+        // New error detected while process is still running
+        const newErrors = currentErrorCount - lastErrorCount;
+        if (newErrors === 1) {
+          logWarning(`Error detected in output (process still running)`);
+        }
+        lastErrorCount = currentErrorCount;
+      }
     });
 
     pm.on('crash', (exitCode: number) => {
-      buffer.lockSnapshot();
-      console.error('[VIBE-WATCH] 📸 Snapshot captured - Ask Claude to "Fix this crash"');
-      console.error(`[VIBE-WATCH] 🔍 Exit code: ${exitCode}`);
+      buffer.lockSnapshot(exitCode);
+      console.error('');
+      console.error(`${colors.red}${colors.bright}╭─────────────────────────────────────────╮${colors.reset}`);
+      console.error(`${colors.red}${colors.bright}│${colors.reset}  ${colors.red}${colors.bright}CRASH DETECTED${colors.reset}                         ${colors.red}${colors.bright}│${colors.reset}`);
+      console.error(`${colors.red}${colors.bright}╰─────────────────────────────────────────╯${colors.reset}`);
+      console.error('');
+      logError(`Exit code: ${exitCode}`);
+
+      const errorMessage = buffer.getErrorMessage();
+      if (errorMessage) {
+        logError(`Error: ${errorMessage.substring(0, 100)}${errorMessage.length > 100 ? '...' : ''}`);
+      }
+
+      const relevantFiles = buffer.extractRelevantFiles();
+      if (relevantFiles.length > 0) {
+        log(`Relevant files: ${relevantFiles.slice(0, 3).join(', ')}${relevantFiles.length > 3 ? '...' : ''}`);
+      }
+
+      console.error('');
+      log(`${colors.bright}📸 Snapshot captured${colors.reset} - Ask Claude: "Check my terminal" or "Fix this crash"`);
+      console.error('');
     });
 
     pm.on('exit', (exitCode: number | null) => {
-      console.error(`[VIBE-WATCH] Process exited with code: ${exitCode}`);
-      process.exit(exitCode || 0);
+      if (exitCode === 0 || exitCode === null) {
+        logSuccess(`Process exited cleanly`);
+      }
+      // Clean up and exit
+      fastify?.close().then(() => {
+        process.exit(exitCode || 0);
+      });
     });
 
     pm.on('error', (err: Error) => {
-      console.error('[VIBE-WATCH] ❌ Error:', err.message);
-      process.exit(1);
+      logError(`Process error: ${err.message}`);
+      fastify?.close().then(() => {
+        process.exit(1);
+      });
     });
 
     // Spawn the command
+    log(`Starting process...`);
+    console.error('');
     const [cmd, ...args] = command;
     pm.spawn(cmd, args);
   });

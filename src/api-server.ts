@@ -7,6 +7,7 @@
 
 import Fastify from 'fastify';
 import type { CircularBuffer } from './buffer.js';
+import type { CrashContext, TerminalOutput } from './types.js';
 
 export async function startApiServer(port: number, buffer: CircularBuffer) {
   const fastify = Fastify({
@@ -15,14 +16,21 @@ export async function startApiServer(port: number, buffer: CircularBuffer) {
 
   // Health check
   fastify.get('/health', async () => {
-    return { status: 'ok', locked: buffer.isLocked() };
+    return {
+      status: 'ok',
+      locked: buffer.isLocked(),
+      framework: buffer.getFramework(),
+      buffer_size: buffer.size(),
+      error_count: buffer.errorCount(),
+      warning_count: buffer.warningCount(),
+    };
   });
 
   // Get live terminal output
   fastify.get<{
     Querystring: { lines?: string; filter?: string }
   }>('/live', async (request) => {
-    const lines = parseInt(request.query.lines || '50', 10);
+    const lines = Math.min(parseInt(request.query.lines || '50', 10), 100);
     const filter = request.query.filter || 'all';
 
     let output: string[];
@@ -35,16 +43,21 @@ export async function startApiServer(port: number, buffer: CircularBuffer) {
       output = buffer.getLast(lines);
     }
 
-    return {
+    const response: TerminalOutput = {
       output,
       timestamp: new Date().toISOString(),
       process_status: buffer.isLocked() ? 'crashed' : 'running',
-      errors_detected: buffer.getErrors().length > 0,
+      errors_detected: buffer.errorCount() > 0,
+      relevant_files: buffer.extractRelevantFiles(),
     };
+
+    return response;
   });
 
   // Get crash snapshot (if exists)
-  fastify.get('/crash', async () => {
+  fastify.get<{
+    Querystring: { verbose?: string }
+  }>('/crash', async (request) => {
     if (!buffer.isLocked()) {
       return {
         error: 'No crash detected',
@@ -52,10 +65,46 @@ export async function startApiServer(port: number, buffer: CircularBuffer) {
       };
     }
 
-    return {
-      output: buffer.getAll(),
+    const verbose = request.query.verbose === 'true';
+    const relevantFiles = buffer.extractRelevantFiles(!verbose);
+
+    const crashContext: CrashContext = {
+      error_message: buffer.getErrorMessage() || 'Unknown error',
+      stack_trace: buffer.getAll(),
+      relevant_files: relevantFiles,
+      exit_code: buffer.getExitCode() || 1,
       timestamp: new Date().toISOString(),
-      process_status: 'crashed',
+    };
+
+    return crashContext;
+  });
+
+  // Get errors only (shortcut endpoint)
+  fastify.get('/errors', async () => {
+    const errors = buffer.getErrors();
+
+    return {
+      output: errors,
+      count: errors.length,
+      timestamp: new Date().toISOString(),
+      process_status: buffer.isLocked() ? 'crashed' : 'running',
+      relevant_files: buffer.extractRelevantFiles(),
+    };
+  });
+
+  // Get error context (lines around errors)
+  fastify.get<{
+    Querystring: { window?: string }
+  }>('/context', async (request) => {
+    const windowSize = parseInt(request.query.window || '5', 10);
+    const context = buffer.getErrorContext(windowSize);
+
+    return {
+      output: context,
+      timestamp: new Date().toISOString(),
+      process_status: buffer.isLocked() ? 'crashed' : 'running',
+      error_message: buffer.getErrorMessage(),
+      relevant_files: buffer.extractRelevantFiles(),
     };
   });
 
