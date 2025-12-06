@@ -15,12 +15,6 @@ Welcome to the VibeWatch documentation. This directory contains all project docu
 - [ROADMAP.md](./planning/ROADMAP.md) - Development roadmap with phases
 - [FEATURE_IDEAS.md](./planning/FEATURE_IDEAS.md) - Future feature ideas and opportunities
 
-## Development Process
-
-- [PRE_COMMIT_CHECKLIST.md](./development/PRE_COMMIT_CHECKLIST.md) - Pre-commit safety checklist
-- [PHASE0_COMPLETE.md](./development/PHASE0_COMPLETE.md) - Phase 0 completion summary
-- [SESSION_SUMMARY.md](./development/SESSION_SUMMARY.md) - Development session notes
-
 ## Architecture Overview
 
 ```
@@ -88,16 +82,6 @@ To optimize token usage:
 | `get_crash_context` | verbose | Get crash details |
 | `get_recent_errors` | - | Get errors only |
 | `ping` | - | Test connectivity |
-
-## Project Status
-
-| Phase | Status | Features |
-|-------|--------|----------|
-| Phase 0 | Complete | Project setup, prototypes |
-| Phase 1 | Complete | CLI, buffer, API, MCP tools |
-| Phase 2 | Complete | Relevance scoring, progressive disclosure |
-| Phase 3 | Planned | Config system, Rust/Go, multi-process |
-| Phase 4 | Planned | Dashboard, auto-fix, integrations |
 
 ## Getting Help
 

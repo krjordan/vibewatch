@@ -144,15 +144,13 @@ src/
 ## Areas We Need Help
 
 ### High Priority
-- [ ] Unit tests (vitest)
-- [ ] Integration tests
 - [ ] Windows compatibility testing
 - [ ] Additional language support (Ruby, Java, PHP)
+- [ ] More framework-specific error patterns
 
 ### Medium Priority
 - [ ] Performance benchmarking
 - [ ] Documentation improvements
-- [ ] Error pattern contributions
 - [ ] MCP tool enhancements
 
 ### Good First Issues

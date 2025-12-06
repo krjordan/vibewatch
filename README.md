@@ -5,8 +5,6 @@
 [![npm version](https://img.shields.io/npm/v/vibewatch.svg)](https://www.npmjs.com/package/vibewatch)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Status:** Phase 2 Complete - Ready for Testing
-
 ## What is VibeWatch?
 
 VibeWatch is a CLI tool that monitors your development commands and exposes terminal output to Claude (or any MCP-compatible AI assistant) in real-time. No more copy-pasting errors - just tell Claude "check my terminal" and it sees everything.
@@ -246,20 +244,11 @@ npm run typecheck
 npm run lint
 ```
 
-## Project Status
-
-- [x] **Phase 0:** Project setup, prototypes
-- [x] **Phase 1:** MVP - CLI, buffer, API server, MCP tools
-- [x] **Phase 2:** Polish - Relevance scoring, progressive disclosure, enhanced filtering
-- [ ] **Phase 3:** Advanced features - Config system, Rust/Go support, multi-process
-- [ ] **Phase 4:** Enterprise - Dashboard, auto-fix mode, integrations
-
 ## Documentation
 
 - [Product Requirements](./docs/planning/PRD.md)
 - [Development Roadmap](./docs/planning/ROADMAP.md)
 - [Feature Ideas](./docs/planning/FEATURE_IDEAS.md)
-- [Development Notes](./docs/development/)
 
 ## Contributing
 
@@ -270,7 +259,7 @@ We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes
-4. Run tests: `npm test` (coming soon)
+4. Run tests: `npm test`
 5. Commit: `git commit -m 'Add amazing feature'`
 6. Push: `git push origin feature/amazing-feature`
 7. Open a Pull Request
