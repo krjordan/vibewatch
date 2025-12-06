@@ -1,51 +1,62 @@
 {
-  "name": "vibewatch",
-  "version": "0.1.0",
-  "description": "Your AI pair programmer's eyes on your terminal. Live terminal monitoring for Claude via MCP.",
-  "type": "module",
-  "author": "Ryan Jordan",
-  "license": "MIT",
-  "keywords": [
-    "mcp",
-    "claude",
-    "terminal",
-    "debugging",
-    "error-monitoring",
-    "developer-tools"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/vibewatch.git"
-  },
-  "bin": {
-    "vibewatch": "./dist/cli.js",
-    "vibewatch-mcp": "./dist/mcp-server.js"
-  },
-  "files": [
-    "dist/**/*",
-    "README.md",
-    "LICENSE"
-  ],
-  "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "commander": "^12.0.0",
-    "fastify": "^5.0.0",
-    "strip-ansi": "^7.1.0",
-    "zod": "^3.25.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.6.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+	"name": "vibewatch",
+	"version": "0.1.0",
+	"description": "Your AI pair programmer's eyes on your terminal. Live terminal monitoring for Claude via MCP.",
+	"type": "module",
+	"author": "Ryan Jordan",
+	"license": "MIT",
+	"keywords": [
+		"mcp",
+		"model-context-protocol",
+		"claude",
+		"ai",
+		"terminal",
+		"cli",
+		"debugging",
+		"error-monitoring",
+		"developer-tools",
+		"nextjs",
+		"vite",
+		"python",
+		"typescript"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/krjordan/vibewatch.git"
+	},
+	"bugs": {
+		"url": "https://github.com/krjordan/vibewatch/issues"
+	},
+	"homepage": "https://github.com/krjordan/vibewatch#readme",
+	"bin": {
+		"vibewatch": "./dist/cli.js",
+		"vibewatch-mcp": "./dist/mcp-server.js"
+	},
+	"files": [
+		"dist/**/*",
+		"README.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"build": "tsup",
+		"dev": "tsup --watch",
+		"typecheck": "tsc --noEmit",
+		"clean": "rm -rf dist",
+		"prepublishOnly": "npm run clean && npm run build"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.0.0",
+		"commander": "^12.0.0",
+		"fastify": "^5.0.0",
+		"strip-ansi": "^7.1.0",
+		"zod": "^3.25.0"
+	},
+	"devDependencies": {
+		"@types/node": "^20.0.0",
+		"tsup": "^8.0.0",
+		"typescript": "^5.6.0"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
 }
