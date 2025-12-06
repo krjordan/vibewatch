@@ -35,8 +35,7 @@ tmp/
 temp/
 *.tmp
 
-# Package manager locks (keep one)
-package-lock.json
+# Package manager locks (keep yarn/pnpm if using npm)
 yarn.lock
 pnpm-lock.yaml
 
